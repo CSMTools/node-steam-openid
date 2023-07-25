@@ -30,11 +30,11 @@ class SteamAuth {
 
   // Get redirect url for Steam
   async getRedirectUrl() {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const authUrl = await this.relyingParty.authenticate("https://steamcommunity.com/openid", false).catch(error => {
         if (error) return reject("Authentication failed: " + error.message);
       });
-      
+
       if (!authUrl) return reject("Authentication failed.");
 
       resolve(authUrl);
@@ -87,28 +87,28 @@ class SteamAuth {
 
   // Authenticate user
   async authenticate(req) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       // Verify assertion
       const result = await this.relyingParty.verifyAssertion(req).catch(error => {
         if (error) return reject(error.message);
       });
-      
+
       if (!result || !result.authenticated)
-          return reject("Failed to authenticate user.");
-        if (
-          !/^https?:\/\/steamcommunity\.com\/openid\/id\/\d+$/.test(
-            result.claimedIdentifier
-          )
+        return reject("Failed to authenticate user.");
+      if (
+        !/^https?:\/\/steamcommunity\.com\/openid\/id\/\d+$/.test(
+          result.claimedIdentifier
         )
-          return reject("Claimed identity is not valid.");
+      )
+        return reject("Claimed identity is not valid.");
 
-        try {
-          const user = await this.fetchIdentifier(result.claimedIdentifier);
+      try {
+        const user = await this.fetchIdentifier(result.claimedIdentifier);
 
-          return resolve(user);
-        } catch (error) {
-          reject(error);
-        }
+        return resolve(user);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 }
