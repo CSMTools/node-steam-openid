@@ -1,7 +1,6 @@
 // Require Dependencies
 const axios = require("axios");
-const openid = require("openid");
-const url = require("url");
+const openid = require("@csmtools/openid");
 
 // Main Class
 class SteamAuth {
@@ -19,23 +18,26 @@ class SteamAuth {
       realm,
       true,
       true,
-      []
+      [],
+      {
+        ns: ['http://specs.openid.net/auth/2.0'],
+        claimed_id: ['https://steamcommunity.com/openid/id/'],
+        identity: ['https://steamcommunity.com/openid/id/'],
+        op_endpoint: ['https://steamcommunity.com/openid/login']
+      }
     );
   }
 
   // Get redirect url for Steam
   async getRedirectUrl() {
     return new Promise((resolve, reject) => {
-      this.relyingParty.authenticate(
-        "https://steamcommunity.com/openid",
-        false,
-        (error, authUrl) => {
-          if (error) return reject("Authentication failed: " + error);
-          if (!authUrl) return reject("Authentication failed.");
+      const authUrl = await this.relyingParty.authenticate("https://steamcommunity.com/openid", false).catch(error => {
+        if (error) return reject("Authentication failed: " + error.message);
+      });
+      
+      if (!authUrl) return reject("Authentication failed.");
 
-          resolve(authUrl);
-        }
-      );
+      resolve(authUrl);
     });
   }
 
@@ -87,9 +89,11 @@ class SteamAuth {
   async authenticate(req) {
     return new Promise((resolve, reject) => {
       // Verify assertion
-      this.relyingParty.verifyAssertion(req, async (error, result) => {
+      const result = await this.relyingParty.verifyAssertion(req).catch(error => {
         if (error) return reject(error.message);
-        if (!result || !result.authenticated)
+      });
+      
+      if (!result || !result.authenticated)
           return reject("Failed to authenticate user.");
         if (
           !/^https?:\/\/steamcommunity\.com\/openid\/id\/\d+$/.test(
@@ -99,33 +103,12 @@ class SteamAuth {
           return reject("Claimed identity is not valid.");
 
         try {
-          // FIXME: Hotfix 06/18/2023
-          // More info: https://twitter.com/variancewarren/status/1670405889113702400
-          const OPENID_CHECK = {
-            ns: 'http://specs.openid.net/auth/2.0',
-            claimed_id: 'https://steamcommunity.com/openid/id/',
-            identity: 'https://steamcommunity.com/openid/id/',
-          };
-
-          const searchParams = url.parse(req.url, true).query;
-
-          if (searchParams['openid.ns'] !== OPENID_CHECK.ns) return reject("Claimed identity is not valid.");
-          if (!searchParams['openid.claimed_id']?.startsWith(OPENID_CHECK.claimed_id)) return reject("Claimed identity is not valid.");
-          if (!searchParams['openid.identity']?.startsWith(OPENID_CHECK.identity)) return reject("Claimed identity is not valid.");
-
-          const validOpEndpoint = 'https://steamcommunity.com/openid/login';
-          
-          if(searchParams['openid.op_endpoint'] !== validOpEndpoint) {
-            return reject("Claimed identity is not valid.");
-          } 
-
           const user = await this.fetchIdentifier(result.claimedIdentifier);
 
           return resolve(user);
         } catch (error) {
           reject(error);
         }
-      });
     });
   }
 }
