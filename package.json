@@ -1,6 +1,6 @@
 {
   "name": "@csmtools/node-steam-openid",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A wrapper package around Steam's Authentication API. Supports promises :)",
   "main": "index.js",
   "scripts": {
@@ -26,8 +26,8 @@
   },
   "homepage": "https://github.com/LeeviHalme/node-steam-openid#readme",
   "dependencies": {
+    "@csmtools/openid": "^1.1.0",
     "axios": "^0.21.2",
-    "@csmtools/openid": "^1.0.0",
     "url": "^0.11.1"
   }
 }
